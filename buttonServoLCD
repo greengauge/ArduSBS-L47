@@ -1,0 +1,83 @@
+//This is a simple implementation for Arduino of a servo, controlled via three buttons with position read out on an LCD.
+//Each press of the left and right buttons moves the servo 5 degrees either way. Holding down moves a number of steps.
+//Pressing the middle button returns the servo to the central position.
+//Version 1.0 by Toby Cambray 09/01/2016
+
+#include <Servo.h>
+#include <LiquidCrystal.h>
+
+LiquidCrystal lcd(12, 11, 8, 7, 6, 5); //LCD is used in 4 pin parallel mode.
+Servo servo; //creates an instance of a servo
+
+int oldpos = 0; //variable to contain the old position
+int newpos = 90; //variable to contain the new position
+int Rp=2; //Right button's pin
+int Mp=3; //Middle button's pin
+int Lp=4; //Left button's pin
+int Rs = 0; //Right button's state
+int Ms = 0; //Middle button's state
+int Ls = 0; //Left button's state
+
+void setup() {
+
+  servo.attach(9);
+  lcd.begin(16, 2);
+  //Serial.begin(9600); //uncomment this for debugging etc.
+  pinMode(2, INPUT);
+  pinMode(3, INPUT);
+  pinMode(4, INPUT);
+  lcd.setCursor(0, 0);
+  lcd.print("Servo Position:");
+  lcd.setCursor(4, 1);
+  lcd.print("degrees");
+  
+}
+
+void loop() {
+  Rs = digitalRead(Rp);
+  //Serial.print(Rs);  //uncomment this for debugging etc.
+  Ms = digitalRead(Mp);
+  //Serial.print(Ms); //uncomment this for debugging etc.
+  Ls = digitalRead(Lp);
+  //Serial.println(Ls); //uncomment this for debugging etc.
+
+  if (Rs == 1){ //checks if the Right button is pressed
+   if(newpos >= 175) //if the servo is at or near the end of it's travel, just go to the end.
+       {newpos = 180;
+       }
+   else{newpos = oldpos + 5; //if it's not near the end of travel, move 5 degrees.
+       }
+
+   Rs = 0; //reset the state variable
+   delay(200); //inelegant delay to enable user to move one step per short push. N.B. assumes buttons are hardware debounced.
+   }
+
+  if (Ms == 1){
+   newpos=90;
+   Ms = 0;
+   delay(200);  //inelegant delay to enable user to move one step per short push. N.B. assumes buttons are hardware debounced.
+   }
+  
+  if (Ls == 1){
+   if(newpos <= 5) //if the servo is at or near the end of it's travel, just go to the end.
+       {newpos = 0;
+       }
+   else{newpos = oldpos - 5; //if it's not near the end of travel, move 5 degrees.
+       }
+
+   Ls = 0; //reset the state variable
+   delay(200); //inelegant delay to enable user to move one step per short push. N.B. assumes buttons are hardware debounced.
+   }
+   if (newpos == oldpos) {} //If there is no command to move, do nothing.
+   else{
+   servo.write(newpos); //If there is a comand, move the servo...
+   lcd.setCursor(0,1); //then write in the display...:
+   lcd.print("   ");  //overwrite three spaces so that if going from a three digit number to a two digit you don't get a spurious zero
+   lcd.setCursor(0,1); 
+   lcd.print(newpos); //write New Position.
+   }
+   oldpos=newpos; //update the old position
+   //delay(10); //this delay might help keep things running smoothly.
+  }
+  
+
