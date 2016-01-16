@@ -1,0 +1,113 @@
+//This is a simple implementation for Arduino of a servo, controlled via three buttons with position read out on an LCD.
+//Each press of the left and right buttons moves the servo 5 degrees either way. Holding down moves a number of steps.
+//Pressing the middle button returns the servo to the central position.
+//Version 1.0 by Toby Cambray 09/01/2016
+
+#include <Servo.h>
+#include <LiquidCrystal.h>
+
+LiquidCrystal lcd(12, 11, 8, 7, 6, 5); //LCD is used in 4 pin parallel mode.
+Servo servo; //creates an instance of a servo
+
+int oldpos = 0; //variable to contain the old position
+int newpos = 90; //variable to contain the new position
+int Rp=2; //Right button's pin
+int Mp=3; //Middle button's pin
+int Lp=4; //Left button's pin
+int Rsn = 0; //Right button's new state
+int Msn = 0; //Middle button's new state
+int Lsn = 0; //Left button's new state
+int Rso = 0; //Right button's old state
+int Mso = 0; //Middle button's old state
+int Lso = 0; //Left button's old state
+unsigned long interval = 1+900; //button press period
+unsigned long currentMillis;
+unsigned long Rstop = 99999999; // variable to compare length of button press;
+unsigned long Lstop = 99999999; // variable to compare length of button press;
+unsigned long Mstop = 99999999; // variable to compare length of button press;
+
+void setup() {
+
+  servo.attach(9);
+  lcd.begin(16, 2);
+  //Serial.begin(9600); //uncomment this for debugging etc.
+  pinMode(2, INPUT);
+  pinMode(3, INPUT);
+  pinMode(4, INPUT);
+  lcd.setCursor(0, 0);
+  lcd.print("Servo Position:");
+  lcd.setCursor(4, 1);
+  lcd.print("degrees");
+  
+}
+
+void loop() {
+  currentMillis = millis(); //each loop takes a reference time
+  Rsn = digitalRead(Rp); //I could gather together the pin reads as per version 1 for clarity... but I didn't!
+  if (Rsn == 1) //If the button is pressed
+     {
+      if ( Rso == 0) //And we know its only just been pressed...
+         { Rstop = currentMillis + interval; //work out a point in the future when the servo is allowed to move - this is basically de-bouncing. Unlike the first version, you can't move multiple steps by holding down the button this way.
+         }
+     } 
+  if ( currentMillis >= Rstop ) //if the de-bounce period has elapsed, move the servo according to a simple rule:
+     { if(oldpos >= 175) //if the servo is at or near the end of it's travel, just go to the end.
+         {newpos = 180;
+          Rstop = 99999999; //reset the Rstop. This isn't perfect coding as doesn't allow for overflow of currentMillis.
+         }
+       else{newpos = oldpos + 5;
+           Rstop = 99999999; //reset
+           } //if it's not near the end of travel, move 5 degrees.
+     }
+  Rso = Rsn; //update the old button state.
+  
+  
+  
+  Lsn = digitalRead(Lp);
+  if (Lsn == 1)
+     {
+      if ( Lso == 0)
+         { Lstop = currentMillis + interval; 
+         }
+     } 
+  if ( currentMillis >= Lstop )
+     { if(oldpos <= 5) //if the servo is at or near the end of it's travel, just go to the end.
+         {newpos = 0;
+          Lstop = 99999999;
+         }
+       else{newpos = oldpos - 5;
+           Lstop = 99999999;
+           } //if it's not near the end of travel, move 5 degrees.
+     }
+  Lso = Lsn;  
+
+
+  Msn = digitalRead(Mp);
+  if (Msn == 1)
+     {
+      if ( Mso == 0)
+         { Mstop = currentMillis + interval; 
+         }
+     } 
+  if ( currentMillis >= Mstop )
+     { newpos = 90;
+       Mstop = 99999999;
+     } 
+     
+  Mso = Msn;
+
+  
+  
+   if (newpos == oldpos) {} //If there is no command to move, do nothing.
+   else{
+   servo.write(newpos); //If there is a comand, move the servo...
+   lcd.setCursor(0,1); //then write in the display...:
+   lcd.print("   ");  //overwrite three spaces so that if going from a three digit number to a two digit you don't get a spurious zero
+   lcd.setCursor(0,1); 
+   //Serial.println(newpos);
+   lcd.print(newpos); //write New Position.
+   }
+   oldpos=newpos; //update the old position
+
+  }
+  
